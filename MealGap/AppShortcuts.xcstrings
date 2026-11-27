@@ -1,0 +1,75 @@
+{
+  "sourceLanguage": "zh-Hans",
+  "strings": {
+    "Start a meal interval in ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 ${applicationName} 记上餐"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a meal interval in ${applicationName}"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 ${applicationName} 記上餐"
+          }
+        }
+      }
+    },
+    "End the meal interval in ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 ${applicationName} 结束间隔"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End the meal interval in ${applicationName}"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 ${applicationName} 結束間隔"
+          }
+        }
+      }
+    },
+    "Check the meal interval in ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 ${applicationName} 查看间隔"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the meal interval in ${applicationName}"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 ${applicationName} 查看間隔"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

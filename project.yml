@@ -1,0 +1,126 @@
+name: MealGap
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: zh-Hans
+  knownRegions: [zh-Hans, en, zh-Hant, ja]
+settings:
+  base:
+    APP_ID: com.hgsldswk.mealgap
+    APP_STORE_ID: "6837368415"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  MealGap:
+    type: application
+    platform: iOS
+    sources: [MealGap, Shared]
+    dependencies:
+      - target: MealGapWidget
+        embed: true
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID)
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: MealGap AppStore
+    entitlements:
+      path: MealGap/MealGap.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.hgsldswk.mealgap]
+    info:
+      path: MealGap/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: 进餐间隔
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+        NSSupportsLiveActivities: true
+        APP_STORE_ID: $(APP_STORE_ID)
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: MealGap Timing Template
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Owner
+            LSItemContentTypes: [com.hgsldswk.mealgap.template]
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.hgsldswk.mealgap.template
+            UTTypeDescription: MealGap Timing Template
+            UTTypeConformsTo: [public.json]
+            UTTypeTagSpecification:
+              public.filename-extension: [mealinterval]
+  MealGapWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - MealGapWidget
+      - path: Shared
+        includes: [L10n.swift, MealActivity.swift, Localizable.xcstrings]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID).widget
+        TARGETED_DEVICE_FAMILY: "1"
+        APPLICATION_EXTENSION_API_ONLY: YES
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: MealGap Widget AppStore
+    entitlements:
+      path: MealGapWidget/MealGapWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.hgsldswk.mealgap]
+    info:
+      path: MealGapWidget/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: 进餐间隔
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+  MealGapTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [MealGapTests, Shared]
+    dependencies:
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID).tests
+        GENERATE_INFOPLIST_FILE: YES
+  MealGapUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [MealGapUITests]
+    dependencies:
+      - target: MealGap
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID).uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: MealGap
+schemes:
+  MealGap:
+    build:
+      targets:
+        MealGap: all
+        MealGapTests: [test]
+    test:
+      config: Debug
+      targets: [MealGapTests]
+  MealGapUI:
+    build:
+      targets:
+        MealGap: all
+        MealGapUITests: [test]
+    test:
+      config: Debug
+      targets: [MealGapUITests]

@@ -1,0 +1,197 @@
+import XCTest
+
+final class FlowUITests: XCTestCase {
+    private let app = XCUIApplication()
+
+    func testAAAWarmUpSimulator() {
+        XCTExpectFailure("云端模拟器首次启动可能超时", strict: false)
+        app.launch()
+        app.terminate()
+    }
+
+    override func setUpWithError() throws { continueAfterFailure = false }
+
+    private func launch(_ extra: [String] = [], language: String = "zh-Hans", reset: Bool = true, environment: [String: String] = [:]) {
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", language == "en" ? "en_US" : language == "zh-Hant" ? "zh_TW" : language == "ja" ? "ja_JP" : "zh_CN"]
+            + (reset ? ["-reset"] : []) + extra
+        app.launchEnvironment = environment
+        app.launch()
+    }
+
+    private func button(_ id: String) -> XCUIElement { app.buttons.matching(identifier: id).firstMatch }
+
+    private func tap(_ id: String) {
+        let element = app.descendants(matching: .any).matching(identifier: id).firstMatch
+        XCTAssertTrue(element.waitForExistence(timeout: 6), id)
+        if !element.isHittable { app.swipeUp() }
+        XCTAssertTrue(element.isHittable, id)
+        element.tap()
+    }
+
+    func testOneTapStartUndoRestartEndUndo() {
+        launch()
+        tap("home.start")
+        XCTAssertTrue(button("home.finish").waitForExistence(timeout: 5))
+        tap("home.undo")
+        tap("home.start")
+        XCTAssertTrue(button("home.finish").waitForExistence(timeout: 5))
+        app.terminate()
+        launch(reset: false)
+        tap("home.finish")
+        XCTAssertTrue(button("home.start").waitForExistence(timeout: 5))
+        tap("home.undo")
+        XCTAssertTrue(button("home.finish").waitForExistence(timeout: 5))
+    }
+
+    func testAdjustmentCanBackfillAnEnd() {
+        launch(["-fixtures", "-running"])
+        tap("home.adjust")
+        tap("editor.mode.finish")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "editor.endDate").firstMatch.waitForExistence(timeout: 5))
+        tap("editor.save")
+        XCTAssertTrue(button("home.start").waitForExistence(timeout: 5))
+        tap("home.history")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "history.record").firstMatch.waitForExistence(timeout: 5))
+    }
+
+    func testCrossMidnightBackfillAndExistingHistory() {
+        launch(["-fixtures"], environment: ["MEAL_GAP_TEST_START": "2026-11-13T22:30:00Z", "MEAL_GAP_TEST_END": "2026-11-14T02:05:00Z", "MEAL_GAP_TEST_ZONE": "UTC"])
+        tap("home.backfill")
+        tap("editor.mode.complete")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "editor.endDate").firstMatch.waitForExistence(timeout: 5))
+        tap("editor.save")
+        XCTAssertTrue(button("home.start").waitForExistence(timeout: 5))
+        tap("home.history")
+        XCTAssertTrue(app.staticTexts["11 小时 55 分"].waitForExistence(timeout: 5))
+        for _ in 0..<3 where !app.staticTexts["3 小时 35 分"].isHittable { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["3 小时 35 分"].isHittable)
+    }
+
+    func testExpiredHistoryAndPaywall() {
+        launch(["-fixtures", "-expired", "-paywall"])
+        tap("pro.close")
+        tap("home.history")
+        tap("history.csv")
+        XCTAssertTrue(app.staticTexts["share.requested"].waitForExistence(timeout: 5))
+        tap("history.trend")
+        tap("pro.close")
+        tap("history.record")
+        tap("editor.save")
+        XCTAssertTrue(button("history.csv").waitForExistence(timeout: 5))
+    }
+
+    func testDeniedNotificationsLeaveTimingAvailable() {
+        launch(["-notifications-denied"])
+        tap("home.settings")
+        XCTAssertTrue(app.staticTexts["settings.denied"].waitForExistence(timeout: 5))
+        tap("settings.close")
+        tap("home.start")
+        tap("home.finish")
+        XCTAssertTrue(button("home.start").waitForExistence(timeout: 5))
+    }
+
+    func testCodeAndFileImport() {
+        launch(["-expired"], environment: [
+            "MEAL_GAP_TEST_CODE": "Template\nMI1:eyJ2ZXJzaW9uIjoxLCJ0YXJnZXRNaW51dGVzIjo3MjB9",
+            "MEAL_GAP_TEST_FILE": "{\"version\":1,\n\"targetMinutes\":360}",
+        ])
+        tap("home.importTemplate")
+        tap("import.paste")
+        XCTAssertTrue(app.staticTexts["import.preview"].waitForExistence(timeout: 5))
+        tap("import.save")
+        XCTAssertTrue(app.staticTexts["import.saved"].waitForExistence(timeout: 5))
+        tap("import.close")
+        tap("home.importTemplateFile")
+        XCTAssertTrue(app.staticTexts["import.preview"].waitForExistence(timeout: 5))
+        tap("import.save")
+        XCTAssertTrue(app.staticTexts["import.saved"].waitForExistence(timeout: 5))
+    }
+
+    func testShareTemplateFromHome() {
+        launch(["-fixtures"])
+        tap("home.shareTemplate")
+        tap("home.shareTemplate.option")
+        XCTAssertTrue(app.images["share.card"].waitForExistence(timeout: 15))
+        tap("share.image")
+        XCTAssertTrue(app.staticTexts["share.requested"].waitForExistence(timeout: 15))
+    }
+
+    func testMilestoneAfterCompletionNotAfterUndoAndRedo() {
+        launch(["-fixtures", "-running", "-milestone"])
+        tap("home.finish")
+        XCTAssertTrue(button("milestone.share").waitForExistence(timeout: 5))
+        tap("home.undo")
+        tap("home.finish")
+        XCTAssertTrue(button("home.start").waitForExistence(timeout: 5))
+        XCTAssertFalse(button("milestone.share").exists)
+    }
+
+    func testLargeTextKeepsPrimaryActionReachable() {
+        launch(["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"], language: "en")
+        tap("home.start")
+        XCTAssertTrue(button("home.finish").waitForExistence(timeout: 5))
+    }
+
+    func testReviewDemo() {
+        launch(["-fixtures"], language: "en")
+        sleep(3)
+        tap("home.start"); sleep(3)
+        tap("home.finish"); sleep(3)
+        tap("home.history"); sleep(3)
+        tap("history.close"); sleep(2)
+        if app.buttons["milestone.dismiss"].waitForExistence(timeout: 2) { tap("milestone.dismiss"); sleep(1) }
+        tap("home.settings"); sleep(2)
+        tap("settings.pro"); sleep(4)
+        tap("pro.close"); sleep(2)
+    }
+
+    func testStoreSimplifiedChinese() { captureStore(language: "zh-Hans") }
+    func testStoreTraditionalChinese() { captureStore(language: "zh-Hant") }
+    func testStoreEnglish() { captureStore(language: "en") }
+    func testStoreJapanese() { captureStore(language: "ja") }
+
+    private func captureStore(language: String) {
+        launch(["-fixtures"], language: language)
+        XCTAssertTrue(button("home.start").waitForExistence(timeout: 5))
+        capture("store-\(language)-01-home")
+        app.terminate()
+        launch(["-fixtures", "-running"], language: language)
+        XCTAssertTrue(app.staticTexts["home.elapsed"].waitForExistence(timeout: 5))
+        capture("store-\(language)-02-timer")
+        tap("home.history")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "history.record").firstMatch.waitForExistence(timeout: 5))
+        capture("store-\(language)-03-history")
+        tap("history.trend")
+        XCTAssertTrue(button("trend.close").waitForExistence(timeout: 5))
+        capture("store-\(language)-04-trends")
+        tap("trend.close")
+        tap("history.close")
+        tap("home.settings")
+        tap("settings.templates")
+        tap("templates.share")
+        XCTAssertTrue(app.images["share.card"].waitForExistence(timeout: 5))
+        capture("store-\(language)-05-template")
+        tap("share.image")
+        if !app.staticTexts["share.requested"].isHittable { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["share.requested"].waitForExistence(timeout: 5))
+    }
+
+    func testPaidScreenshot() {
+        launch(["-fixtures", "-paid-mode", "-paywall", "-expired"])
+        XCTAssertTrue(app.staticTexts["pro.testPrice"].waitForExistence(timeout: 5))
+        capture("paid-01-paywall")
+    }
+
+    private func capture(_ name: String) {
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        if let directory = ProcessInfo.processInfo.environment["SHOTS_DIR"], !directory.isEmpty {
+            let path = URL(fileURLWithPath: directory)
+            try? FileManager.default.createDirectory(at: path, withIntermediateDirectories: true)
+            try? screenshot.pngRepresentation.write(to: path.appendingPathComponent("\(name).png"), options: .atomic)
+        }
+    }
+}
